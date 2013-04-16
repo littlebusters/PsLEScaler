@@ -1,0 +1,215 @@
+// Fireworks Extension: Command
+// Photoshop Live Effect Scaling.
+// version: 1.0.0
+// auther: @littlebusters
+// license: MIT
+
+function LBPsLiveEffectsScaler()
+{
+	var dom = fw.getDocumentDOM();
+	var sel = fw.selection;
+
+	if( !sel.length ) {
+		alert( 'Select the Object!' )
+		return false;
+	}
+
+	var extractedObj  = new Array(); // filters(with scaled PsLE) & the selection
+
+	var lv            = 0; // nesting level
+	var extractedIdx  = 0; // index of object PsLE applied
+	var parentIdx     = new Array(); // index of parent object index
+	
+	var targetEfcts   = new Array( 'satin', 'dropShadow', 'innerShadow', 'outerGlow', 'innerGlow', 'solidFill', 'gradientFill', 'patternFill', 'bevelEmboss', 'stroke' );
+	var efctName      = new String(); // PsLE Name
+	var psLEFound     = false;
+
+	var objectScaling = true; // Scaling Mode: false is PsLE only
+
+	// ask scaling factor
+	var scale = prompt( 'Enter a Scaling Factor. (unit: %)', 100 );
+	// var scale = 200; // test value
+
+	if( !scale ) return false;
+	if( '/' == String( scale ).substr( -1, 1 ) ) {
+		objectScaling = false;
+		scale = scale.slice( 0, String( scale ).length - 1 ) - 0;
+	}
+	if( isFinite( scale ) ) {
+		scale = Math.abs( scale / 100 );
+	} else {
+		alert( 'Enter a Number.' );
+		return false;
+	}
+
+	// find object PsLE applied.
+	findObject( sel );
+
+	// apply new filter.
+	for( var objLen = extractedObj.length - 1; objLen >= 0; objLen-- ) {
+		fw.selection = extractedObj[ objLen ].selection;
+		dom.applyEffects( extractedObj[ objLen ].scaledFilters );
+	};
+
+	// object scaling.
+	if( extractedObj && objectScaling ) {
+		fw.selection = sel;
+		var orgBound = dom.getSelectionBounds();
+		var coord = { x: orgBound.left, y: orgBound.top };
+		dom.scaleSelection( scale, scale, "autoTrimImages transformAttributes" );
+		dom.moveSelectionTo( coord, false, false );
+	}
+
+	
+	// functions ///////////////////////////////////////////////////////////////
+	// find applied filter 
+	function findObject( _obj )
+	{
+		for ( var i = 0; i < _obj.length; i++ ) {
+
+			parentIdx.push( i );
+
+			if( _obj[ i ].toString() == '[object Group]' ) { // object is group
+
+				if( _obj[ i ].effectList ) { // if applied filter
+					findPsLE( _obj[ i ].effectList );
+				}
+				lv++;
+
+				// recursive processing.
+				findObject( _obj[ i ].elements );
+
+			} else { // object isn't group
+
+				if( _obj[ i ].effectList ) { // if applied filter
+					findPsLE( _obj[ i ].effectList );
+				}
+
+				parentIdx.pop();
+			}
+		};
+
+		lv--;
+		parentIdx.pop();
+	}
+
+	// find allied PsLE & PsLE Scaling
+	function findPsLE( _effectList )
+	{
+		var effectNum = _effectList.effects.length;
+
+		for( var efctLen = 0; efctLen < effectNum; efctLen++ ) {
+			if( _effectList.effects[ efctLen ].name.match( /photoshop/i ) ) { // check applied PsLE
+				psLEFound = true;
+				var scaledPsLE = new Object();
+				scaledPsLE = { category: 'UNUSED', effects: [], name: 'UNUSED' };
+				var efctName = new String();
+				break;
+			}
+		}
+
+		if( psLEFound ) { // applied PsLE
+
+			for( var i = 0; i < effectNum; i++ ) {
+			
+				if( 'Photoshop' == _effectList.effects[ i ].name.substr(0, 9) ) {
+
+					scaledPsLE.effects.push( {
+						BottomRight:     _effectList.effects[ i ].BottomRight,
+						EffectIsVisible: _effectList.effects[ i ].EffectIsVisible,
+						EffectMoaID:     _effectList.effects[ i ].EffectMoaID,
+						TopLeft:         _effectList.effects[ i ].TopLeft,
+						category:        _effectList.effects[ i ].category,
+						name:            _effectList.effects[ i ].name
+					} );
+
+					for( var enblLen = 0; enblLen < targetEfcts.length; enblLen++ ) {
+
+						efctName = targetEfcts[ enblLen ];
+
+						if( 1 == String( _effectList.effects[ i ][ efctName ] ).substring( 0, 1 ) ) {
+
+							var attrs = _effectList.effects[ i ][ efctName ].split( '&' );
+							switch( efctName ) {
+								case 'stroke':
+									attrs[ 2 ] = valueRounding( attrs[ 2 ], 'size' );
+									break;
+								case 'dropShadow':
+									attrs[ 5 ] = valueRounding( attrs[ 5 ], 'dist' );
+									attrs[ 6 ] = valueRounding( attrs[ 6 ], 'size' );
+									break;
+								case 'innerShadow':
+									attrs[ 5 ] = valueRounding( attrs[ 5 ], 'dist' );
+									attrs[ 6 ] = valueRounding( attrs[ 6 ], 'size' );
+									break;
+								case 'outerGlow':
+									var subAttrs = attrs[ 3 ].split( ':' );
+									subAttrs[ 2 ] = valueRounding( subAttrs[ 2 ], 'size' );
+									attrs[ 3 ] = subAttrs.join( ':' );
+									break;
+								case 'innerGlow':
+									var subAttrs = attrs[ 3 ].split( ':' );
+									subAttrs[ 2 ] = valueRounding( subAttrs[ 2 ], 'size' );
+									attrs[ 3 ] = subAttrs.join( ':' );
+									break;
+								case 'bevelEmboss':
+									attrs[ 10 ] = valueRounding( attrs[ 10 ], 'size' );
+									attrs[ 11 ] = valueRounding( attrs[ 11 ], 'soft' );
+									break;
+								case 'satin':
+									attrs[ 5 ] = valueRounding( attrs[ 5 ], 'dist' );
+									attrs[ 6 ] = valueRounding( attrs[ 6 ], 'size' );
+									break;
+							}
+
+							scaledPsLE.effects[ i ][ efctName ] = attrs.join( '&' );
+
+						} else if( _effectList.effects[ i ] ) {
+							scaledPsLE.effects[ i ][ efctName ] = _effectList.effects[ i ][ efctName ];
+						}
+					}
+				} else {
+					scaledPsLE.effects.push( _effectList.effects[ i ] );
+				}
+			};
+
+			extractedObj[ extractedIdx ] = new Object();
+			extractedObj[ extractedIdx ].selection = 'sel[' + parentIdx[ 0 ] + ']';
+			extractedObj[ extractedIdx ].scaledFilters = scaledPsLE;
+
+			for( var i = 1; i < parentIdx.length; i++ ) {
+				extractedObj[ extractedIdx ].selection += '.elements[' + parentIdx[ i ] + ']';
+			};
+
+			extractedObj[ extractedIdx ].selection = eval( extractedObj[ extractedIdx ].selection );
+
+			extractedIdx++;
+		}
+
+		psLEFound = false;
+	}
+
+	// raunding scaled value
+	function valueRounding( _value, _type ) 
+	{
+		var rounded = Math.round( _value * scale );
+
+		if( 1 > rounded ) rounded = 1;
+		switch( _type ) {
+			case 'size':
+				if( 250 < rounded ) rounded = 250;
+				break;
+			case 'dist':
+				if( 250 < rounded ) rounded = 250;
+				break;
+			case 'soft':
+				if( 16 < rounded ) rounded = 16;
+				break;
+		}
+		return rounded + '.000000';
+	}
+
+	return true;
+}
+
+LBPsLiveEffectsScaler();

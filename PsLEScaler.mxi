@@ -1,0 +1,47 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<macromedia-extension
+	 name="PsLE Scaler"
+	 version="1.0.0"
+	 type="command"
+	 locked="false"
+	 mxiversion="2.0.0"
+	 xmanversion="2.0.0">
+
+	<author name="littlebusters" />
+
+	<products>
+		<product name="Fireworks" version="9" primary="true" />
+	</products>
+
+	<update method="directlink" url="http://creative-tweet.net/tools/psle_scaler/psle_scaler_update.xml" />
+
+	<description>
+	<![CDATA[
+オブジェクトの拡大縮小に合わせて、Photoshopライブエフェクトも拡大縮小するコマンドです。拡大縮小率の数値の単位は%です。拡大縮小率の数字の後ろに「/（半角スラッシュ）」を入力することで、Photoshopライブエフェクトのみ拡大縮小することもできます。
+	]]>
+	</description>
+
+	<ui-access>
+	<![CDATA[
+コマンド -> PsLE Scaler
+	]]>
+	</ui-access>
+
+	<license-agreement>
+	<![CDATA[
+この拡張機能はMITライセンスのフリーウェアです。
+拡張機能が原因で発生したトラブルなどは責任を負いかねますので、自己責任でお使いください。
+
+(c)creative tweet. http://creative-tweet.net
+	]]>
+	</license-agreement>
+
+	<files>
+		<file source="PsLE Scaler.jsf" destination="$fireworksuser/Commands/" />
+	</files>
+
+	<configuration-changes>
+	</configuration-changes>
+	<signatures />
+
+</macromedia-extension>
